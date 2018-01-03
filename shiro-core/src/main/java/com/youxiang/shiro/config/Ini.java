@@ -47,6 +47,7 @@ public class Ini implements Map<String, Ini.Section> {
     /**
      * 判断sections是否为空
      * 只要其中有一个section的数据不为空，则整体不为空
+     *
      * @return
      */
     public boolean isEmpty() {
@@ -63,6 +64,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 获取所有section的名称
+     *
      * @return
      */
     public Set<String> getSessionNames() {
@@ -75,6 +77,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 通过sectionName获取对应的Section
+     *
      * @param sectionName
      * @return
      */
@@ -86,6 +89,7 @@ public class Ini implements Map<String, Ini.Section> {
     /**
      * 添加section，如果对应名称的section不存在，则创建新的section并放入sections中；如果已经存在，则直接
      * 返回该section
+     *
      * @param sectionName
      * @return
      */
@@ -101,6 +105,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 移除section
+     *
      * @param sectionName
      * @return
      */
@@ -111,6 +116,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 去掉sectionName的两头空格，如果sectionName为空，那么直接返回默认的sectionName，也就是空字符串
+     *
      * @param sectionName
      * @return
      */
@@ -126,6 +132,7 @@ public class Ini implements Map<String, Ini.Section> {
     /**
      * 根据sectionName设置对应section下的键值对，如果sectionName对应的section不存在，则先添加section，
      * 然后再设置键值对
+     *
      * @param sectionName
      * @param propertyName
      * @param propertyValue
@@ -141,7 +148,8 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 返回指定的section属性的值
-     * @param sectionName section名
+     *
+     * @param sectionName  section名
      * @param propertyName 属性名
      * @return
      */
@@ -152,7 +160,8 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 返回指定section属性的值，如果值为null，则返回默认值
-     * @param sectionName section名
+     *
+     * @param sectionName  section名
      * @param propertyName 属性名
      * @param defaultValue 默认值
      * @return
@@ -164,6 +173,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 加载指定路径下的资源文件来创建Ini实例
+     *
      * @param resourcePath 资源路径
      * @return
      */
@@ -188,6 +198,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 加载指定的ini配置文件
+     *
      * @param iniConfig
      */
     public void load(String iniConfig) {
@@ -196,6 +207,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 加载InputStream中的数据到Ini实例
+     *
      * @param is
      */
     public void load(InputStream is) {
@@ -213,6 +225,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 加载Reader中的数据到Ini实例
+     *
      * @param reader
      */
     public void load(Reader reader) {
@@ -230,6 +243,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     /**
      * 加载Scanner中的数据到Ini实例
+     *
      * @param scanner
      */
     public void load(Scanner scanner) {
@@ -423,6 +437,7 @@ public class Ini implements Map<String, Ini.Section> {
         /**
          * 判断是否为key value分隔符
          * 空格(" ")、冒号(":")、等号("=")被认定为分隔符
+         *
          * @param c
          * @return
          */
@@ -433,7 +448,8 @@ public class Ini implements Map<String, Ini.Section> {
         /**
          * 判断索引位置字符是否为转义字符
          * 如果该字符前面的为"\"，则为需要转移的
-         * @param s 字符序列
+         *
+         * @param s     字符序列
          * @param index 索引位置
          * @return
          */
