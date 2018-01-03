@@ -5,4 +5,6 @@ package com.youxiang.shiro.authz;
  * Date: 2018/1/3 16:18
  */
 public interface Authorizer {
+
+    boolean isPermitted();
 }
