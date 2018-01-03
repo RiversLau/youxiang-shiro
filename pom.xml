@@ -9,6 +9,7 @@
     <modules>
         <module>shiro-core</module>
         <module>shiro-config</module>
+        <module>shiro-lang</module>
     </modules>
 
     <properties>

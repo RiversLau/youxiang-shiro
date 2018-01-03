@@ -1,7 +1,6 @@
 package com.youxiang.shiro.config;
 
-import com.youxiang.shiro.util.CollectionUtils;
-import com.youxiang.shiro.util.ResourceUtils;
+import com.youxiang.shiro.io.ResourceUtils;
 import com.youxiang.shiro.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -319,7 +318,7 @@ public class Ini implements Map<String, Ini.Section> {
 
     @Override
     public String toString() {
-        if (CollectionUtils.isEmpty(this.sections)) {
+        if (this.sections == null || this.sections.isEmpty()) {
             return "<empty INI>";
         } else {
             StringBuilder sb = new StringBuilder();
