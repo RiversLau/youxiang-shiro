@@ -12,6 +12,6 @@ public abstract class SecurityUtils {
     private static SecurityManager securityManager;
 
     public static Subject getSubject() {
-        Subject subject = ThreadContext.getSubject();
+        Subject subject = ThreadContext.getSubject() ;
     }
 }
