@@ -1,8 +1,8 @@
 package com.youxiang.shiro.config;
 
+import com.youxiang.shiro.io.ResourceUtils;
 import com.youxiang.shiro.util.AbstractFactory;
 import com.youxiang.shiro.util.CollectionUtils;
-import com.youxiang.shiro.util.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
