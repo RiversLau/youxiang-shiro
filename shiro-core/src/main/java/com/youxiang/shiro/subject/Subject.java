@@ -1,11 +1,16 @@
 package com.youxiang.shiro.subject;
 
+import com.youxiang.shiro.SecurityUtils;
 import com.youxiang.shiro.authc.AuthenticationException;
 import com.youxiang.shiro.authc.AuthenticationToken;
 import com.youxiang.shiro.authz.AuthorizationException;
 import com.youxiang.shiro.authz.Permission;
 import com.youxiang.shiro.session.Session;
+import com.youxiang.shiro.subject.support.DefaultSubjectContext;
+import com.youxiang.shiro.util.StringUtils;
+import com.youxiang.shiro.mgt.SecurityManager;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -237,7 +242,79 @@ public interface Subject {
         }
 
         public Builder(SecurityManager securityManager) {
+            if (securityManager == null) {
+                throw new NullPointerException("SecurityManager method argument cannot be null.");
+            }
+            this.securityManager = securityManager;
+            this.subjectContext = newSubjectContextInstance();
+            if (this.subjectContext == null) {
+                throw new IllegalStateException("Subect return from 'newSubjectContextInstance' " +
+                        "cannot be null.");
+            }
+            this.subjectContext.setSecurityManager(securityManager);
+        }
 
+        protected SubjectContext newSubjectContextInstance() {
+            return new DefaultSubjectContext();
+        }
+
+        protected SubjectContext getSubjectContext() {
+            return this.subjectContext;
+        }
+
+        public Builder sessionId(Serializable sessionId) {
+            if (sessionId != null) {
+                this.subjectContext.setSessionId(sessionId);
+            }
+            return this;
+        }
+
+        public Builder host(String host) {
+            if (StringUtils.hasText(host)) {
+                this.subjectContext.setHost(host);
+            }
+            return this;
+        }
+
+        public Builder session(Session session) {
+            if (session != null) {
+                this.subjectContext.setSession(session);
+            }
+            return this;
+        }
+
+        public Builder principals(PrincipalCollection principals) {
+            if (principals != null && !principals.isEmpty()) {
+                this.subjectContext.setPrincipals(principals);
+            }
+            return this;
+        }
+
+        public Builder sessionCreationEnabled(boolean enabled) {
+            this.subjectContext.setSessionCreationEnabled(enabled);
+            return this;
+        }
+
+        public Builder authenticated(boolean authenticated) {
+            this.subjectContext.setAuthenticated(authenticated);
+            return this;
+        }
+
+        public Builder contextAttribute(String attributeKey, Object attributeValue) {
+            if (attributeKey == null) {
+                String msg = "";
+                throw new IllegalArgumentException(msg);
+            }
+            if (attributeValue == null) {
+                this.subjectContext.remove(attributeKey);
+            } else {
+                this.subjectContext.put(attributeKey, attributeValue);
+            }
+            return this;
+        }
+
+        public Subject buildSubject() {
+            return this.securityManager.createSubject(this.subjectContext);
         }
     }
 }

@@ -10,6 +10,7 @@
         <module>shiro-core</module>
         <module>shiro-config</module>
         <module>shiro-lang</module>
+        <module>shiro-event</module>
     </modules>
 
     <properties>
