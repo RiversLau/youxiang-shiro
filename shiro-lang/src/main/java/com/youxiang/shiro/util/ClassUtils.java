@@ -91,7 +91,7 @@ public class ClassUtils {
         return clazz;
     }
 
-    public static boolean isVailable(String fullyQualifiedClassName) {
+    public static boolean isAvailable(String fullyQualifiedClassName) {
         try {
             forName(fullyQualifiedClassName);
             return true;

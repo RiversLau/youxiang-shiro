@@ -58,6 +58,41 @@ public class DefaultEventBus implements EventBus {
         }
     }
 
+    public void register(Object instance) {
+        if (instance == null) {
+            log.info("Received null instance for event listener registration. Ignoring registration request.");
+            return;
+        }
+        unregister(instance);
+
+        List<EventListener> listeners = getEventListenerResolver().getEventListeners(instance);
+        if (listeners == null || listeners.isEmpty()) {
+            log.warn("Unable to resolve event listeners for subscriber instance [{}]. Ignoring registration request.",
+                    instance);
+            return;
+        }
+        Subscription subscription = new Subscription(listeners);
+        this.registryReadLock.lock();
+        try {
+            this.registry.put(instance, subscription);
+        } finally {
+            this.registryReadLock.unlock();
+        }
+    }
+
+    public void unregister(Object instance) {
+        if (instance == null) {
+            return;
+        }
+        this.registryReadLock.lock();
+        try {
+            this.registry.remove(instance);
+        } finally {
+            this.registryReadLock.unlock();
+        }
+    }
+
+
     private class Subscription {
 
         private final List<EventListener> listeners;
