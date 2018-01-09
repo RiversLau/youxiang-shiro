@@ -1,5 +1,6 @@
 package com.youxiang.shiro.config;
 
+import com.youxiang.shiro.codec.Hex;
 import com.youxiang.shiro.config.event.*;
 import com.youxiang.shiro.event.EventBus;
 import com.youxiang.shiro.event.EventBusAware;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.ProtocolException;
 import java.util.*;
 
 /**
@@ -282,6 +284,199 @@ public class ReflectionBuilder {
         }
     }
 
+    protected boolean isReference(String value) {
+        return value != null && value.startsWith(OBJECT_REFERENCE_BEGIN_TOKEN);
+    }
+
+    protected String getId(String referenceToken) {
+        return referenceToken.substring(OBJECT_REFERENCE_BEGIN_TOKEN.length());
+    }
+
+    public Object getReferencedObject(String id) {
+        Object o = objects != null && !objects.isEmpty() ? objects.get(id) : null;
+        if (o == null) {
+            String msg = "The object with id [" + id + "] has not yet been defined and therefore cannot be " +
+                    "referenced.  Please ensure objects are defined in the order in which they should be " +
+                    "created and made available for future reference.";
+            throw new UnresolveableReferenceException(msg);
+        }
+        return o;
+    }
+
+    protected String unescapeIfNecessary(String value) {
+        if (value != null && value.startsWith(ESCAPED_OBJECT_REFERENCE_BEGIN_TOKEN)) {
+            return value.substring(ESCAPED_OBJECT_REFERENCE_BEGIN_TOKEN.length() - 1);
+        }
+        return value;
+    }
+
+    protected Object resolveReference(String reference) {
+        String id = getId(reference);
+        log.debug("Encountered object reference '{}'. Looking up object with id '{}'", reference, id);
+        final Object referencedObject = getReferencedObject(id);
+        if (referencedObject instanceof Factory) {
+            return ((Factory) referencedObject).getInstance();
+        }
+        return referencedObject;
+    }
+
+    protected boolean isTypedProperty(Object object, String propertyName, Class clazz) {
+        if (clazz == null) {
+            throw new NullPointerException("type (class) argument cannot be null.");
+        }
+
+        try {
+            PropertyDescriptor descriptor = beanUtilsBean.getPropertyUtils().getPropertyDescriptor(object, propertyName);
+            if (descriptor == null) {
+                String msg = "Property '" + propertyName + "' does not exist for object of type " + object.getClass().getName() + ".";
+                throw new ConfigurationException(msg);
+            }
+            Class propertyClazz = descriptor.getPropertyType();
+            return clazz.isAssignableFrom(propertyClazz);
+        } catch (ConfigurationException ce) {
+            throw ce;
+        } catch (Exception e) {
+            String msg = "Unable to detemine if property [" + propertyName + "] represents a " + clazz.getName();
+            throw new ConfigurationException(msg);
+        }
+    }
+
+    protected Set<?> toSet(String sValue) {
+        String[] tokens = StringUtils.split(sValue);
+        if (tokens == null || tokens.length <= 0) {
+            return null;
+        }
+
+        if (tokens.length == 1 && isReference(tokens[0])) {
+            Object reference = resolveReference(tokens[0]);
+            if (reference instanceof Set) {
+                return (Set) reference;
+            }
+        }
+
+        Set<String> setTokens = new LinkedHashSet<String>(Arrays.asList(tokens));
+        Set<Object> values = new LinkedHashSet<Object>(setTokens.size());
+        for (String token : setTokens) {
+            Object value = resolveValue(token);
+            values.add(value);
+        }
+        return values;
+    }
+
+    protected Map<?, ?> toMap(String sValue) {
+        String[] tokens = StringUtils.split(sValue, StringUtils.DEFAULT_DELIMITER_CHAR, StringUtils.DEFAULT_QUOTE_CHAR,
+                StringUtils.DEFAULT_QUOTE_CHAR, true, true);
+        if (tokens == null || tokens.length <= 0) {
+            return null;
+        }
+
+        if (tokens.length == 1 && isReference(tokens[0])) {
+            Object reference = resolveReference(tokens[0]);
+            if (reference instanceof Map) {
+                return (Map<?, ?>) reference;
+            }
+        }
+
+        Map<String, String> mapTokens = new LinkedHashMap<String, String>(tokens.length);
+        for (String token : tokens) {
+            String[] kvPair = StringUtils.split(token, MAP_KEY_VALUE_DELIMITER);
+            if (kvPair == null || kvPair.length != 2) {
+                String msg = "Map property value [" + sValue + "] contained key-value pair token [" +
+                        token + "] that does not properly split to a single key and pair.  This must be the " +
+                        "case for all map entries.";
+                throw new ConfigurationException(msg);
+            }
+            mapTokens.put(kvPair[0], kvPair[1]);
+        }
+
+        Map<Object, Object> map = new LinkedHashMap<Object, Object>(mapTokens.size());
+        for (Map.Entry<String, String> entry : mapTokens.entrySet()) {
+            Object key = resolveValue(entry.getKey());
+            Object value = resolveValue(entry.getValue());
+            map.put(key, value);
+        }
+        return map;
+    }
+
+    protected Collection<?> toCollection(String sValue) {
+        String[] tokens = StringUtils.split(sValue);
+        if (tokens == null || tokens.length <= 0) {
+            return null;
+        }
+
+        if (tokens.length == 1 && isReference(tokens[0])) {
+            Object reference = resolveReference(tokens[0]);
+            if (reference instanceof Collection) {
+                return (Collection) reference;
+            }
+        }
+
+        List<Object> values = new ArrayList<Object>(tokens.length);
+        for (String token : tokens) {
+            Object value = resolveValue(token);
+            values.add(value);
+        }
+        return values;
+    }
+
+    protected List<?> toList(String sValue) {
+        String[] tokens = StringUtils.split(sValue);
+        if (tokens == null || tokens.length <= 0) {
+            return null;
+        }
+
+        if (tokens.length == 1 && isReference(tokens[0])) {
+            Object reference = resolveReference(tokens[0]);
+            if (reference instanceof List) {
+                return (List<?>) reference;
+            }
+        }
+
+        List<Object> values = new ArrayList<Object>(tokens.length);
+        for (String token : tokens) {
+            Object value = resolveValue(token);
+            values.add(value);
+        }
+        return values;
+    }
+
+    protected byte[] toBytes(String sValue) {
+        if (sValue == null) {
+            return null;
+        }
+        byte[] bytes;
+        if (sValue.startsWith(HEX_BEGIN_TOKEN)) {
+            String hex = sValue.substring(HEX_BEGIN_TOKEN.length());
+            bytes = Hex.decode(hex);
+        } else {
+            bytes = Base64.decode(sValue);
+        }
+        return bytes;
+    }
+
+    protected Object resolveValue(String stringValue) {
+        Object value;
+        if (isReference(stringValue)) {
+            value = resolveReference(stringValue);
+        } else {
+            value = unescapeIfNecessary(stringValue);
+        }
+        return value;
+    }
+
+    protected String checkForNullOrEmptyLiteral(String stringValue) {
+        if (stringValue == null) {
+            return null;
+        }
+        if (stringValue.equals("\"null\"")) {
+            return NULL_VALUE_TOKEN;
+        } else if (stringValue.equals("\"\"\"\"")) {
+            return EMPTY_STRING_VALUE_TOKEN;
+        } else {
+            return stringValue;
+        }
+    }
+
     protected void applyProperty(Object object, String propertyPath, Object value) {
 
         int mapBegin = propertyPath.indexOf(MAP_PROPERTY_BEGIN_TOKEN);
@@ -311,8 +506,28 @@ public class ReflectionBuilder {
                     Map map = (Map)getProperty(object, mapPropertyPath);
                     Object mapKey = resolveValue(keyString);
                     map.put(mapKey, value);
+                } else {
+                    int index = Integer.valueOf(keyString);
+                    setIndexedProperty(object, mapPropertyPath, index, value);
                 }
             }
+        } else {
+            Object referencedValue = null;
+            if (isTypedProperty(object, mapPropertyPath, Map.class)) {
+                Map map = (Map) getProperty(object, mapPropertyPath);
+                Object mapKey = resolveValue(keyString);
+                referencedValue = map.get(mapKey);
+            } else {
+                int index = Integer.valueOf(keyString);
+                referencedValue = getIndexedProperty(object, mapPropertyPath, index);
+            }
+
+            if (referencedValue == null) {
+                throw new ConfigurationException("Referenced map/array value " + mapPropertyPath + "[" +
+                        keyString + "] does not exist.");
+            }
+
+            applyProperty(referencedValue, remaining, value);
         }
     }
 
@@ -340,6 +555,57 @@ public class ReflectionBuilder {
         } catch (Exception e) {
             throw new ConfigurationException("Unable to access property '" + propertyPath + "'", e);
         }
+    }
+
+    private void setIndexedProperty(Object object, String propertyPath, int index, Object value) {
+        try {
+            beanUtilsBean.getPropertyUtils().setIndexedProperty(object, propertyPath, index, value);
+        } catch (Exception e) {
+            throw new ConfigurationException("Unable to set array property '" + propertyPath + "'.", e);
+        }
+    }
+
+    private Object getIndexedProperty(Object object, String propertyPath, int index) {
+        try {
+            return beanUtilsBean.getPropertyUtils().getIndexedProperty(object, propertyPath, index);
+        } catch (Exception e) {
+            throw new ConfigurationException("Unable to acquire array property '" + propertyPath + "'.", e);
+        }
+    }
+
+    protected boolean isIndexedPropertyAssignment(String propertyPath) {
+        return propertyPath.endsWith("" + MAP_PROPERTY_END_TOKEN);
+    }
+
+    protected void applyProperty(Object object, String propertyName, String stringValue) {
+
+        Object value;
+        if (NULL_VALUE_TOKEN.equals(stringValue)) {
+            value = null;
+        } else if (EMPTY_STRING_VALUE_TOKEN.equals(stringValue)) {
+            value = StringUtils.EMPTY_STRING;
+        } else if (isIndexedPropertyAssignment(propertyName)) {
+            String checked = checkForNullOrEmptyLiteral(stringValue);
+            value = resolveValue(checked);
+        } else if (isTypedProperty(object, propertyName, Set.class)) {
+            value = toSet(stringValue);
+        } else if (isTypedProperty(object, propertyName, Map.class)) {
+            value = toMap(stringValue);
+        } else if (isTypedProperty(object, propertyName, List.class)) {
+            value = toList(stringValue);
+        } else if (isTypedProperty(object, propertyName, Collection.class)) {
+            value = toCollection(stringValue);
+        } else if (isTypedProperty(object, propertyName, byte[].class)) {
+            value = toBytes(stringValue);
+        } else if (isTypedProperty(object, propertyName, ByteSource.class)) {
+            byte[] bytes = toBytes(stringValue);
+            value = ByteSource.Util.bytes(bytes);
+        } else {
+            String checked = checkForNullOrEmptyLiteral(stringValue);
+            value = resolveValue(checked);
+        }
+
+        applyProperty(object, propertyName, value);
     }
 
     private Interpolator createInterpolator() {
