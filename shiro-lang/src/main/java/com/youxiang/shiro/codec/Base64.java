@@ -118,7 +118,7 @@ public class Base64 {
         return encode(binaryData, true);
     }
 
-    public static byte[] enode(byte[] pArray) {
+    public static byte[] encode(byte[] pArray) {
         return encode(pArray, false);
     }
 
@@ -167,6 +167,135 @@ public class Base64 {
             l = (byte) (b2 & 0x0f);
             k = (byte) (b1 & 0x03);
 
+            byte val1 = ((b1 & SIGN) == 0) ? (byte) (b1 >> 2) : (byte) ((b1) >> 2 ^ 0xc0);
+            byte val2 = ((b2 & SIGN) == 0) ? (byte) (b2 >> 4) : (byte) ((b2) >> 4 ^ 0xf0);
+            byte val3 = ((b3 & SIGN) == 0) ? (byte) (b3 >> 6) : (byte) ((b3) >> 6 ^ 0xfc);
+
+            encodedData[encodedIndex] = lookUpBase64Alphabet[val1];
+            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[val2 | (k << 4)];
+            encodedData[encodedIndex + 2] = lookUpBase64Alphabet[(l << 2) | val3];
+            encodedData[encodedIndex + 3] = lookUpBase64Alphabet[b3 & 0x3f];
+
+            encodedIndex += 4;
+            if (isChunked) {
+                if (encodedIndex == nextSeparatorIndex) {
+                    System.arraycopy(CHUNK_SEPARATOR, 0, encodedData, encodedIndex, CHUNK_SEPARATOR.length);
+                    chunksSoFar++;
+                    nextSeparatorIndex = (CHUNK_SIZE * (chunksSoFar + 1)) + (chunksSoFar * CHUNK_SEPARATOR.length);
+                    encodedIndex += CHUNK_SEPARATOR.length;
+                }
+            }
         }
+        dataIndex = i * 3;
+        if (fewerThan24bits == EIGHTBIT) {
+            b1 = binaryData[dataIndex];
+            k = (byte) (b1 & 0x03);
+
+            byte val1 = ((b1 & SIGN) == 0) ? (byte) (b1 >> 2) : (byte) ((b1) >> 2 ^ 0xc0);
+            encodedData[encodedIndex] = lookUpBase64Alphabet[val1];
+            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[k << 4];
+            encodedData[encodedIndex + 2] = PAD;
+            encodedData[encodedIndex + 3] = PAD;
+        } else if (fewerThan24bits == SIXTEENBIT) {
+            b1 = binaryData[dataIndex];
+            b2 = binaryData[dataIndex + 1];
+            l = (byte) (b2 & 0x0f);
+            k = (byte) (b1 & 0x03);
+
+            byte val1 = ((b1 & SIGN) == 0) ? (byte) (b1 >> 2) : (byte) ((b1) >> 2 ^ 0xc0);
+            byte val2 = ((b2 & SIGN) == 0) ? (byte) (b2 >> 4) : (byte) ((b2) >> 4 ^ 0xf0);
+
+            encodedData[encodedIndex] = lookUpBase64Alphabet[val1];
+            encodedData[encodedIndex + 1] = lookUpBase64Alphabet[val2 | (k << 4)];
+            encodedData[encodedIndex + 2] = lookUpBase64Alphabet[l << 2];
+            encodedData[encodedIndex + 3] = PAD;
+        }
+
+        if (isChunked) {
+            if (chunksSoFar < chunckCount) {
+                System.arraycopy(CHUNK_SEPARATOR, 0, encodedData, encodedDataLength - CHUNK_SEPARATOR.length, CHUNK_SEPARATOR.length);
+            }
+        }
+        return encodedData;
+    }
+
+    public static String decodeToString(String base64Encoded) {
+        byte[] encodedBytes = CodecSupport.toBytes(base64Encoded);
+        return decodeToString(encodedBytes);
+    }
+
+    public static String decodeToString(byte[] base64Encoded) {
+        byte[] decoded = decode(base64Encoded);
+        return CodecSupport.toString(decoded);
+    }
+
+    public static byte[] decode(String base64Encoded) {
+        byte[] bytes = CodecSupport.toBytes(base64Encoded);
+        return decode(bytes);
+    }
+
+    public static byte[] decode(byte[] base64Encoded) {
+        base64Encoded = discardNonBase64(base64Encoded);
+
+        if (base64Encoded.length == 0) {
+            return new byte[0];
+        }
+
+        int numberQuadruple = base64Encoded.length / FOURBYTE;
+        byte[] decodedData;
+        byte b1, b2, b3, b4, marker0, marker1;
+
+        int encodedIndex = 0;
+        int dataIndex;
+        {
+            int lastData = base64Encoded.length;
+            while (base64Encoded[lastData - 1] == PAD) {
+                if (--lastData == 0) {
+                    return new byte[0];
+                }
+            }
+            decodedData = new byte[lastData - numberQuadruple];
+        }
+
+        for (int i = 0; i < numberQuadruple; i++) {
+            dataIndex = i * 4;
+            marker0 = base64Encoded[dataIndex + 2];
+            marker1 = base64Encoded[dataIndex + 3];
+
+            b1 = base64Alphabet[base64Encoded[dataIndex]];
+            b2 = base64Alphabet[base64Encoded[dataIndex + 1]];
+
+            if (marker0 != PAD && marker1 != PAD) {
+                b3 = base64Alphabet[marker0];
+                b4 = base64Alphabet[marker1];
+
+                decodedData[encodedIndex] = (byte) (b1 << 2 | b2 >> 4);
+                decodedData[encodedIndex + 1] = (byte) (((b2 & 0xf) << 4) | ((b3 >> 2) & 0xf));
+                decodedData[encodedIndex + 2] = (byte) (b3 << 6 | b4);
+            } else if (marker0 == PAD) {
+                decodedData[encodedIndex] = (byte) (b1 << 2 | b2 >> 4);
+            } else {
+                b3 = base64Alphabet[marker0];
+                decodedData[encodedIndex] = (byte) (b1 << 2 | b2 >> 4);
+                decodedData[encodedIndex + 1] = (byte) (((b2 & 0xf) << 4) | ((b3 >> 2) & 0xf));
+            }
+            encodedIndex += 3;
+        }
+        return decodedData;
+    }
+
+    static byte[] discardNonBase64(byte[] data) {
+        byte[] groomedData = new byte[data.length];
+        int bytesCopied = 0;
+
+        for (byte aByte : data) {
+            if (isBase64(aByte)) {
+                groomedData[bytesCopied++] = aByte;
+            }
+        }
+
+        byte[] packedData = new byte[bytesCopied];
+        System.arraycopy(groomedData, 0, packedData, 0, bytesCopied);
+        return packedData;
     }
 }

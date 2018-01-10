@@ -1,5 +1,6 @@
 package com.youxiang.shiro.config;
 
+import com.youxiang.shiro.codec.Base64;
 import com.youxiang.shiro.codec.Hex;
 import com.youxiang.shiro.config.event.*;
 import com.youxiang.shiro.event.EventBus;
