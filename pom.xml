@@ -11,6 +11,7 @@
         <module>shiro-config</module>
         <module>shiro-lang</module>
         <module>shiro-event</module>
+        <module>shiro-cache</module>
     </modules>
 
     <properties>

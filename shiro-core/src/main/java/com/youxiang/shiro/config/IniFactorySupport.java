@@ -6,6 +6,8 @@ import com.youxiang.shiro.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
  * Author: RiversLau
  * Date: 2018/1/2 16:36
@@ -17,6 +19,7 @@ public abstract class IniFactorySupport<T> extends AbstractFactory<T> {
     private static transient final Logger log = LoggerFactory.getLogger(IniFactorySupport.class);
 
     private Ini ini;
+    private Map<String, ?> defaultBeans;
 
     protected IniFactorySupport() {
     }
@@ -31,6 +34,14 @@ public abstract class IniFactorySupport<T> extends AbstractFactory<T> {
 
     public void setIni(Ini ini) {
         this.ini = ini;
+    }
+
+    protected Map<String, ?> getDefaults() {
+        return defaultBeans;
+    }
+
+    protected void setDefaults(Map<String, ?> defaultBeans) {
+        this.defaultBeans = defaultBeans;
     }
 
     public static Ini loadDefaultClassPathIni() {
