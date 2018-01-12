@@ -44,6 +44,24 @@ public class StringUtils {
         return out;
     }
 
+    public static String toString(Object[] array) {
+        return toDelimitedString(array, ",");
+    }
+
+    public static String toDelimitedString(Object[] array, String delimiter) {
+        if (array == null || array.length == 0) {
+            return EMPTY_STRING;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < array.length; i++) {
+            if (i > 0) {
+                sb.append(delimiter);
+            }
+            sb.append(array[i]);
+        }
+        return sb.toString();
+    }
+
     public static String[] split(String line) {
         return split(line, DEFAULT_DELIMITER_CHAR);
     }
