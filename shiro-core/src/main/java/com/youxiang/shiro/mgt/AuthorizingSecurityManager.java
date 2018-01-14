@@ -2,6 +2,7 @@ package com.youxiang.shiro.mgt;
 
 import com.youxiang.shiro.authz.AuthorizationException;
 import com.youxiang.shiro.authz.Authorizer;
+import com.youxiang.shiro.authz.ModularRealmAuthorizer;
 import com.youxiang.shiro.authz.Permission;
 import com.youxiang.shiro.subject.PrincipalCollection;
 import com.youxiang.shiro.util.LifecycleUtils;
