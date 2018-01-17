@@ -3,10 +3,7 @@ package com.youxiang.shiro.session.mgt;
 import com.youxiang.shiro.authz.AuthorizationException;
 import com.youxiang.shiro.event.EventBus;
 import com.youxiang.shiro.event.EventBusAware;
-import com.youxiang.shiro.session.InvalidSessionException;
-import com.youxiang.shiro.session.Session;
-import com.youxiang.shiro.session.SessionException;
-import com.youxiang.shiro.session.SessionListener;
+import com.youxiang.shiro.session.*;
 import com.youxiang.shiro.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,8 +164,62 @@ public abstract class AbstractNativeSessionManager extends AbstractSessionManage
         return lookupRequiredSession(sessionKey).getAttribute(objectKey);
     }
 
-    public void setAttribute(SessionKey sessionKey, Object objectKey, Object value) throws InvalidSessionException {
+    public void setAttribute(SessionKey sessionKey, Object attributeKey, Object value) throws InvalidSessionException {
+        if (value == null) {
+            removeAttribute(sessionKey, attributeKey);
+        } else {
+            Session s = lookupRequiredSession(sessionKey);
+            s.setAttribute(attributeKey, value);
+            onChange(s);
+        }
+    }
 
+    public Object removeAttribute(SessionKey sessionKey, Object attributeKey) throws InvalidSessionException {
+        Session s = lookupRequiredSession(sessionKey);
+        Object removed = s.removeAttribute(attributeKey);
+        if (removed != null) {
+            onChange(s);
+        }
+        return removed;
+    }
+
+    public boolean isValid(SessionKey key) {
+        try {
+            checkValid(key);
+            return true;
+        } catch (InvalidSessionException e) {
+            return false;
+        }
+    }
+
+    public void stop(SessionKey key) throws InvalidSessionException {
+        Session session = lookupRequiredSession(key);
+        try {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Stopping the session with id [" + session.getId() + "]");
+            }
+            session.stop();
+            onStop(session, key);
+            notifyStop(session);
+        } catch (InvalidSessionException e) {
+            afterStopped(session);
+        }
+    }
+
+    protected void onStop(Session session, SessionKey key) {
+        onStop(session);
+    }
+
+    protected void onStop(Session session) {
+        onChange(session);
+    }
+
+    protected void afterStopped(Session session) {
+
+    }
+
+    public void checkValid(SessionKey key) throws InvalidSessionException {
+        lookupRequiredSession(key);
     }
 
     protected void onChange(Session s) {
